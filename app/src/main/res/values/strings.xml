@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">MVoice</string>
+    <string name="mvoice_heading">MVoice</string>
+    <string name="sub_heading">Use Your Voice to Perform Transactions</string>
 </resources>
