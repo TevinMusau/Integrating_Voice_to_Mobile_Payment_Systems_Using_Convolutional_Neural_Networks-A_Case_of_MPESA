@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.application'
+//    id 'com.chaquo.python'
 }
 
 android {
@@ -13,6 +14,32 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        
+//        sourceSets {
+//            main {
+//                python {
+//                    srcDirs = ["src/main/python"]
+//                }
+//            }
+//        }
+
+//        python {
+//            buildPython "C:\\Program Files\\Python39\\python.exe"
+////            pip {
+////                install "\"C:\\Users\\tevin\\Downloads\\torch-1.12.1-cp39-cp39-win_amd64.whl\""
+////                install "\"C:\\Users\\tevin\\Downloads\\torchaudio-0.12.1-cp39-cp39-win_amd64.whl\""
+////                install "\"C:\\Users\\tevin\\Downloads\\numba-0.56.2-cp39-cp39-win_amd64.whl\""
+////                install "\"C:\\Users\\tevin\\Downloads\\protobuf-3.19.6-py2.py3-none-any.whl\""
+////                install "\"C:\\Users\\tevin\\Downloads\\llvmlite-0.39.1-cp39-cp39-win_amd64.whl\""
+////                install "\"C:\\Users\\tevin\\Downloads\\scipy-1.8.1-cp39-cp39-win_amd64.whl\""
+////                install "\"C:\\Users\\tevin\\Downloads\\hmmlearn-0.2.7-cp39-cp39-win_amd64.whl\""
+////                install "\"C:\\Users\\tevin\\Downloads\\pyannote.audio-1.1.2-py3-none-any.whl\""
+////            }
+//        }
+//
+//        ndk {
+//            abiFilters "armeabi-v7a"
+//        }
     }
 
     buildTypes {
@@ -28,11 +55,11 @@ android {
 }
 
 dependencies {
-
     implementation 'androidx.appcompat:appcompat:1.5.1'
     implementation 'com.google.android.material:material:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
+//    implementation 'com.github.squti:Android-Wave-Recorder:1.7.0'
 }

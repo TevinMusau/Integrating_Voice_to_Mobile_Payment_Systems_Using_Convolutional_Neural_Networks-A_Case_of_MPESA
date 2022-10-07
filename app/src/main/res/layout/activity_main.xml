@@ -26,16 +26,6 @@
         android:layout_marginTop="13dp"
         android:background="@color/lime" />
 
-    <ImageButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:backgroundTint="@color/white"
-        android:layout_below="@id/sub_heading"
-        android:layout_marginTop="100dp"
-        android:onClick="voiceInput"
-        android:src="@drawable/microphone" />
-
     <TextView
         android:id="@+id/sub_heading"
         android:layout_width="wrap_content"
@@ -47,7 +37,27 @@
         android:layout_marginTop="30sp"
         android:textSize="20sp"
         android:maxLines="1"
-        android:textStyle="italic"
-        />
+        android:textStyle="italic" />
+
+    <ImageButton
+        android:id="@+id/startRecording"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/sub_heading"
+        android:layout_centerInParent="true"
+        android:layout_marginTop="100dp"
+        android:backgroundTint="@color/white"
+        android:onClick="voiceInput"
+        android:src="@drawable/microphone" />
+
+    <Button
+        android:id="@+id/stopRecording"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/startRecording"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="30dp"
+        android:text="Stop Recording"/>
+
 
 </RelativeLayout>
