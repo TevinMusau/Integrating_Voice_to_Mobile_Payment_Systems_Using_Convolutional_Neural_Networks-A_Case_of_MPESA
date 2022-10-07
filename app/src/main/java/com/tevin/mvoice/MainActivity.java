@@ -40,8 +40,10 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // create an instance of the class to record audio in .wav format
         WavClass wavObj = new WavClass(Environment.getExternalStorageDirectory().getAbsolutePath());
 
+        // initializing buttons
         startRecording = findViewById(R.id.startRecording);
         stopRecording = findViewById(R.id.stopRecording);
 
@@ -50,10 +52,12 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View view) {
                 if (checkPermissions())
                 {
+                    // start voice input
                     wavObj.startRecording();
                 }
                 else
                 {
+                    // request for permissions to record audio and write to ext. storage
                     requestPermissions();
                 }
             }
@@ -62,12 +66,14 @@ public class MainActivity extends AppCompatActivity
         stopRecording.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                // stop recording
                 wavObj.stopRecording();
                 Toast.makeText(MainActivity.this, "Recording Stopped", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
+    // check if permissions are granted for the app
     private boolean checkPermissions(){
         int first = ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
         int second = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -75,15 +81,9 @@ public class MainActivity extends AppCompatActivity
         return first == PackageManager.PERMISSION_GRANTED && second == PackageManager.PERMISSION_GRANTED;
     }
 
+    // request permissions to record audio and write to ext. storage
     private void requestPermissions()
     {
         ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
-    }
-
-
-    public void voiceInput(View view)
-    {
-        // Telling us voice input is beginning
-        Toast.makeText(MainActivity.this, "Beginning Voice Input...", Toast.LENGTH_LONG).show();
     }
 }
