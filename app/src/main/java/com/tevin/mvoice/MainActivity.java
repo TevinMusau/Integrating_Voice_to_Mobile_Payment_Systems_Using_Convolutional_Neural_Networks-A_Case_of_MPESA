@@ -11,6 +11,7 @@ import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
@@ -31,11 +32,11 @@ public class MainActivity extends AppCompatActivity
 {
     // initializing constants
     private Button stopRecording;
-    private ImageButton startRecording;
-    private MediaRecorder mediaRecorder;
 
-    Secrets picovoiceSecret;
+    // instance of Secrets class where secrete credentials are stored
+    Secrets porcupineSecret;
 
+    // Porcupine instance
     PorcupineManager porcupineManager;
 
     // create an instance of the class to record audio in .wav format
@@ -47,87 +48,89 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        picovoiceSecret = new Secrets();
+        porcupineSecret = new Secrets();
 
-        File file = new File("java/com/tevin/mvoice/Secrets.java");
-        if ((file.exists()))
-        {
-            Log.d("Yes", "It's there");
-        }
+        // initializing stop button
+        stopRecording = findViewById(R.id.stopRecording);
 
         try {
+            // start Porcupine Wake Word Builder
             porcupineManager = new PorcupineManager.Builder()
-                    .setAccessKey(picovoiceSecret.getPicovoiceAccessKey())
-                    .setKeywordPaths(new String[]{"assets/start.ppn", "assets/transact.ppn"})
+                    .setAccessKey(porcupineSecret.getPorcupineAccessKey())
+                    .setKeyword(Porcupine.BuiltInKeyword.JARVIS)
                     .build(MainActivity.this, new PorcupineManagerCallback() {
                         @Override
                         public void invoke(int keywordIndex) {
                             if (keywordIndex == 0)
                             {
-                                Log.d("Start", "We Begin");
-                                beginRecording();
+                                if (checkPermissions()) {
+                                    // begin voice input
+                                    beginRecording();
+                                }
+                                else {
+                                    // request permissions for writing ext. storage and recording audio
+                                    requestPermissions();
+                                }
                             }
                             else
                             {
-                                Log.d("End", "We are Done");
-                                endRecording();
+                                Log.d("Porcupine", "Invalid Keyword!!");
+                                // end voice input
+                                // endRecording();
                             }
                         }
                     });
         } catch (PorcupineException e) {
-            Log.d("No", "Smth Went Wrong");
+            Log.d("Error", "Something Went Wrong: " + e);
             e.printStackTrace();
         }
 
+        // start the Porcupine Builder
         porcupineManager.start();
-        Log.d("Good", "Porcupine Started!");
+        Log.d("Porcupine", "Porcupine Started Successfully!");
 
-        // initializing buttons
-//        startRecording = findViewById(R.id.startRecording);
-//        stopRecording = findViewById(R.id.stopRecording);
-//
-//        startRecording.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                if (checkPermissions())
-//                {
-//                    // start voice input
-//                    wavObj.startRecording();
-//                }
-//                else
-//                {
-//                    // request for permissions to record audio and write to ext. storage
-//                    requestPermissions();
-//                }
-//            }
-//        });
-//
-//        stopRecording.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//                // stop recording
-//                wavObj.stopRecording();
-//                Toast.makeText(MainActivity.this, "Recording Stopped", Toast.LENGTH_SHORT).show();
-//            }
-//        });
+        // stop recording when this button is clicked
+        stopRecording.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // stop recording
+                wavObj.stopRecording();
+                Toast.makeText(MainActivity.this, "Stopping...", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
-    private void endRecording()
-    {
-        try {
-            porcupineManager.stop();
-        } catch (PorcupineException e) {
-            e.printStackTrace();
-        }
-        Log.d("VoiceIN", "Stopped!");
-        wavObj.stopRecording();
-        Toast.makeText(MainActivity.this, "Voice Input Stopped", Toast.LENGTH_SHORT).show();
-    }
+//    private void endRecording()
+//    {
+//        try {
+//            porcupineManager.stop();
+//            porcupineManager.delete();
+//        } catch (PorcupineException e) {
+//            e.printStackTrace();
+//        }
+//        Log.d("VoiceIN", "Stopped!");
+//        wavObj.stopRecording();
+//        Toast.makeText(MainActivity.this, "Voice Input Stopped", Toast.LENGTH_SHORT).show();
+//    }
 
     private void beginRecording()
     {
+        // Two processes, Porcupine and AudioRecorder, can't use the same microphone at the same time
+        // Therefore, we must stop one of them
+        try {
+            // stopping Porcupine
+            porcupineManager.stop();
+            Log.d("Porcupine", "Porcupine Stopped!");
+
+            // Clearing resources used by Porcupine
+            porcupineManager.delete();
+        } catch (PorcupineException e) {
+            e.printStackTrace();
+        }
+
+        // Begin Voice input recording
         wavObj.startRecording();
-        Log.d("VoiceIN","Started!");
-        Toast.makeText(MainActivity.this, "Started Voice Input", Toast.LENGTH_SHORT).show();
+        Log.d("AudioRecord","Voice Capture Started!");
+        Toast.makeText(MainActivity.this, "Recording...", Toast.LENGTH_SHORT).show();
     }
 
     // check if permissions are granted for the app
