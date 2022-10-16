@@ -1,6 +1,6 @@
 plugins {
     id 'com.android.application'
-//    id 'com.chaquo.python'
+    id 'com.chaquo.python'
 }
 
 android {
@@ -15,31 +15,22 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         
-//        sourceSets {
-//            main {
-//                python {
-//                    srcDirs = ["src/main/python"]
-//                }
-//            }
-//        }
-
-//        python {
-//            buildPython "C:\\Program Files\\Python39\\python.exe"
-////            pip {
-////                install "\"C:\\Users\\tevin\\Downloads\\torch-1.12.1-cp39-cp39-win_amd64.whl\""
-////                install "\"C:\\Users\\tevin\\Downloads\\torchaudio-0.12.1-cp39-cp39-win_amd64.whl\""
-////                install "\"C:\\Users\\tevin\\Downloads\\numba-0.56.2-cp39-cp39-win_amd64.whl\""
-////                install "\"C:\\Users\\tevin\\Downloads\\protobuf-3.19.6-py2.py3-none-any.whl\""
-////                install "\"C:\\Users\\tevin\\Downloads\\llvmlite-0.39.1-cp39-cp39-win_amd64.whl\""
-////                install "\"C:\\Users\\tevin\\Downloads\\scipy-1.8.1-cp39-cp39-win_amd64.whl\""
-////                install "\"C:\\Users\\tevin\\Downloads\\hmmlearn-0.2.7-cp39-cp39-win_amd64.whl\""
-////                install "\"C:\\Users\\tevin\\Downloads\\pyannote.audio-1.1.2-py3-none-any.whl\""
-////            }
-//        }
-//
-//        ndk {
-//            abiFilters "armeabi-v7a"
-//        }
+        sourceSets {
+            main {
+                python {
+                    srcDirs = ["src/main/python"]
+                }
+            }
+        }
+        python {
+            pip {
+                install "mutagen"
+                install "pydub"
+            }
+        }
+        ndk {
+            abiFilters "armeabi-v7a"
+        }
     }
 
     buildTypes {

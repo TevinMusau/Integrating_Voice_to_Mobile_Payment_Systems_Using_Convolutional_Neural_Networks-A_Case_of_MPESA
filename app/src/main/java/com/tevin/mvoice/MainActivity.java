@@ -17,7 +17,13 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import com.chaquo.python.PyObject;
+import com.chaquo.python.Python;
+import com.chaquo.python.android.AndroidPlatform;
+
 import ai.picovoice.picovoice.*;
 import ai.picovoice.porcupine.*;
 
@@ -33,14 +39,23 @@ public class MainActivity extends AppCompatActivity
     // initializing constants
     private Button stopRecording;
 
+    // testing textview
+    private TextView test;
+
     // instance of Secrets class where secrete credentials are stored
     Secrets porcupineSecret;
 
     // Porcupine instance
     PorcupineManager porcupineManager;
 
-    // create an instance of the class to record audio in .wav format
-    WavClass wavObj = new WavClass(Environment.getExternalStorageDirectory().getAbsolutePath());
+    // for setting time that the recording was captured
+    int current_time;
+
+    /* create instances of the class to record audio in .wav format
+    * These instances represent different categories of voice prints
+    * e.g., raw, full duration voice prints will have the instance which directs to the path where they will be stored
+    * */
+    WavClass wavObj = new WavClass(Environment.getExternalStorageDirectory().getAbsolutePath() + "/MVoice/Raw Voice Prints");
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
@@ -48,7 +63,33 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        if (!Python.isStarted()){
+            Python.start(new AndroidPlatform(this));
+        }
+
+        // create the main MVoice Dir
+        String MVoice_directory_status = create_MVoice_Main_Directory();
+        Log.d("MVoice Directory:", MVoice_directory_status);
+
+        // create the raw voice prints subDir
+        String raw_voice_prints_subdir_status = create_subdirectories("Raw Voice Prints");
+        Log.d("RawVoicePrints SubDir:", raw_voice_prints_subdir_status);
+
+        // create the raw voice prints split to 1 sec intervals subDir
+        String raw_voice_prints_split_subdir_status = create_subdirectories("Voice Prints Split");
+        Log.d("RawVoicePrints SubDir:", raw_voice_prints_split_subdir_status);
+
+        // create python instance
+        Python python = Python.getInstance();
+
+        // specify python file
+        PyObject pythonFile = python.getModule("split_audio");
+
+        // instance of secrets class that houses client secrets
         porcupineSecret = new Secrets();
+
+        // instantiate the testing text view
+        test = findViewById(R.id.test_textview);
 
         // initializing stop button
         stopRecording = findViewById(R.id.stopRecording);
@@ -94,10 +135,71 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onClick(View view) {
                 // stop recording
-                wavObj.stopRecording();
+                current_time = wavObj.stopRecording();
+
+                // create a subdirectory with timestamp
+                String raw_voice_prints_split_with_timestamp_subdir_status = create_child_subdirectories("Voice Prints Split", String.valueOf(current_time));
+                Log.d("V.SplitStamp SubDir:", raw_voice_prints_split_with_timestamp_subdir_status);
+
+                String result =  pythonFile.callAttr("split_audio", "/storage/emulated/0/MVoice/Raw Voice Prints", current_time).toString();
+                test.setText(result);
                 Toast.makeText(MainActivity.this, "Stopping...", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private String create_child_subdirectories(String parent_directory, String child_directory)
+    {
+        // specifying dir name
+        File dir = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/MVoice/" + parent_directory + "/" + child_directory);
+        if (!dir.isDirectory()){
+            // create the dir if it doesn't already exist
+            if (dir.mkdir()) {
+                return "Directory Created";
+            }
+            else{
+                return "Unable to create Child Directory";
+            }
+        }
+        else{
+            return "Child Directory already exists";
+        }
+    }
+
+    private String create_subdirectories(String directory_name)
+    {
+        // specifying dir name
+        File dir = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/MVoice/" + directory_name);
+        if (!dir.isDirectory()){
+            // create the dir if it doesn't already exist
+            if (dir.mkdir()) {
+                return "Directory Created";
+            }
+            else{
+                return "Unable to create MVoice Directory";
+            }
+        }
+        else{
+            return "MVoice Directory already exists";
+        }
+    }
+
+    private String create_MVoice_Main_Directory()
+    {
+        // specifying dir name
+        File dir = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/MVoice");
+        if (!dir.isDirectory()){
+            // create the dir if it doesn't already exist
+            if (dir.mkdir()) {
+                return "Directory Created";
+            }
+            else{
+                return "Unable to create MVoice Directory";
+            }
+        }
+        else{
+            return "MVoice Directory already exists";
+        }
     }
 //    private void endRecording()
 //    {

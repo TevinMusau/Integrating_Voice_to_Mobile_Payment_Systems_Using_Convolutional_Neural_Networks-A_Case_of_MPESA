@@ -7,12 +7,16 @@ import android.media.MediaRecorder;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.sql.Timestamp;
 
 public class WavClass
 {
     String filePath = null;
-    String tempRawFile = "temp_record.raw";
-    String tempWavFile = "final_record.wav";
+    int current_time = 0;
+    Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+    int time = (int) timestamp.getTime();
+    String tempRawFile = "temp_record"+time+".raw";
+    String tempWavFile = "final_record"+time+".wav";
     final int bpp = 16;
     int sampleRate = 44100;
     int channel = AudioFormat.CHANNEL_IN_STEREO;
@@ -117,7 +121,7 @@ public class WavClass
             e.printStackTrace();
         }
     }
-    private void createWavFile(String tempPath,String wavPath){
+    private int createWavFile(String tempPath,String wavPath){
         try {
             FileInputStream fileInputStream = new FileInputStream(tempPath);
             FileOutputStream fileOutputStream = new FileOutputStream(wavPath);
@@ -136,6 +140,7 @@ public class WavClass
         catch (Exception e){
             e.printStackTrace();
         }
+        return this.time;
     }
     public void startRecording(){
         try{
@@ -152,7 +157,7 @@ public class WavClass
             e.printStackTrace();
         }
     }
-    public void stopRecording(){
+    public int stopRecording(){
         try{
             if(recorder != null) {
                 isRecording = false;
@@ -162,11 +167,12 @@ public class WavClass
                 }
                 recorder.release();
                 recordingThread = null;
-                createWavFile(getPath(tempRawFile),getPath(tempWavFile));
+                this.current_time = createWavFile(getPath(tempRawFile),getPath(tempWavFile));
             }
         }
         catch (Exception e){
             e.printStackTrace();
         }
+        return this.current_time;
     }
 }
