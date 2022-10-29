@@ -1,22 +1,18 @@
 package com.tevin.mvoice;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.media.AudioFormat;
-import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.SystemClock;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,15 +20,24 @@ import com.chaquo.python.PyObject;
 import com.chaquo.python.Python;
 import com.chaquo.python.android.AndroidPlatform;
 
-import ai.picovoice.picovoice.*;
 import ai.picovoice.porcupine.*;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
-//import com.chaquo.python.PyObject;
-//import com.chaquo.python.Python;
-//import com.chaquo.python.android.AndroidPlatform;
-
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity
 {
@@ -45,17 +50,28 @@ public class MainActivity extends AppCompatActivity
     // instance of Secrets class where secrete credentials are stored
     Secrets porcupineSecret;
 
+    // instance of Secrets class where flask address is stored
+    Secrets flaskAddress = new Secrets();
+
     // Porcupine instance
     PorcupineManager porcupineManager;
 
     // for setting time that the recording was captured
     int current_time;
+    int time;
 
     /* create instances of the class to record audio in .wav format
     * These instances represent different categories of voice prints
     * e.g., raw, full duration voice prints will have the instance which directs to the path where they will be stored
     * */
     WavClass wavObj = new WavClass(Environment.getExternalStorageDirectory().getAbsolutePath() + "/MVoice/Raw Voice Prints");
+
+    private String POST = "POST";
+    private String url = flaskAddress.getFlaskAddress();
+    ArrayList<String> predictedWords = new ArrayList<>();
+
+    // client instance
+    OkHttpClient client = new OkHttpClient();
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
@@ -136,6 +152,7 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View view) {
                 // stop recording
                 current_time = wavObj.stopRecording();
+                time = current_time;
 
                 // create a subdirectory with timestamp
                 String raw_voice_prints_split_with_timestamp_subdir_status = create_child_subdirectories("Voice Prints Split", String.valueOf(current_time));
@@ -144,8 +161,111 @@ public class MainActivity extends AppCompatActivity
                 String result =  pythonFile.callAttr("split_audio", "/storage/emulated/0/MVoice/Raw Voice Prints", current_time).toString();
                 test.setText(result);
                 Toast.makeText(MainActivity.this, "Stopping...", Toast.LENGTH_SHORT).show();
+
+                try {
+                    // send request to flask server
+                    sendRequest(time);
+                    Toast.makeText(MainActivity.this, "Sending Request...", Toast.LENGTH_SHORT).show();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         });
+    }
+
+    private void sendRequest(int time) throws IOException
+    {
+        int numberOfFiles = 0;
+
+        // full url to the endpoint
+        String fullURL = this.url+"/"+"predict";
+        Log.d("URL:", fullURL);
+
+        File dir = new File(Environment.getExternalStorageDirectory() + "/MVoice/Voice Prints Split/"+time);
+        File[] files = dir.listFiles();
+
+        if (files != null)
+        {
+            numberOfFiles = files.length;
+            Log.d("NoOfFiles:", String.valueOf(numberOfFiles));
+
+            for (int i = 1; i <= numberOfFiles; i++)
+            {
+                String audio_path = "/storage/emulated/0/MVoice/Voice Prints Split/"+time+"/yeboo["+i+"]"+time+".wav";
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                BufferedInputStream in = new BufferedInputStream(new FileInputStream(audio_path));
+                int read;
+                byte[] buff = new byte[1024];
+                while ((read = in.read(buff)) > 0)
+                {
+                    out.write(buff, 0, read);
+                }
+                out.flush();
+                byte[] audioBytes = out.toByteArray();
+
+                // create a request body
+                RequestBody postAudio = new MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
+                        .addFormDataPart("file", "audio.wav", RequestBody.create(MediaType.parse("audio/wav"), audioBytes))
+                        .build();
+
+                // post the request
+                postRequest(fullURL, postAudio, new ApiCallback() {
+                    @Override
+                    public void onOkHttpResponse(String data) {
+                        predictedWords.add(data);
+                        System.out.println(predictedWords);
+                    }
+
+                    @Override
+                    public void onOkHttpFailure(Exception exception) {
+                        System.out.println("Error: "+ exception);
+                    }
+                });
+            }
+        }
+    }
+
+    private void postRequest(String url, RequestBody postBody, ApiCallback callback)
+    {
+        // Posting the request
+        Request request = new Request.Builder()
+            .url(url)
+            .post(postBody)
+            .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                // cancel the call on fail
+                callback.onOkHttpFailure(e);
+                call.cancel();
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException
+            {
+                // get the predicted number from the model
+                // for some reason it doesn't allow me to call for the response more than once and update a view
+                Log.d("Success", "Response Received!");
+
+                // get the response and store it
+                String word = Objects.requireNonNull(response.body()).string();
+                callback.onOkHttpResponse(word);
+//                runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        predictedWords.add(word);
+//                        System.out.println(predictedWords);
+//                    }
+//                });
+            }
+        });
+    }
+
+    private interface ApiCallback{
+        void onOkHttpResponse(String data);
+        void onOkHttpFailure(Exception exception);
     }
 
     private String create_child_subdirectories(String parent_directory, String child_directory)
@@ -201,18 +321,6 @@ public class MainActivity extends AppCompatActivity
             return "MVoice Directory already exists";
         }
     }
-//    private void endRecording()
-//    {
-//        try {
-//            porcupineManager.stop();
-//            porcupineManager.delete();
-//        } catch (PorcupineException e) {
-//            e.printStackTrace();
-//        }
-//        Log.d("VoiceIN", "Stopped!");
-//        wavObj.stopRecording();
-//        Toast.makeText(MainActivity.this, "Voice Input Stopped", Toast.LENGTH_SHORT).show();
-//    }
 
     private void beginRecording()
     {
