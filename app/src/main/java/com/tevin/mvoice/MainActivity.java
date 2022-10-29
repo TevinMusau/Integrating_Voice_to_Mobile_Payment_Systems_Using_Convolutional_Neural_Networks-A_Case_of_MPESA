@@ -163,8 +163,26 @@ public class MainActivity extends AppCompatActivity
                 Toast.makeText(MainActivity.this, "Stopping...", Toast.LENGTH_SHORT).show();
 
                 try {
-                    // send request to flask server
-                    sendRequest(time);
+                    // send request to flask server and get response
+                    sendRequest(time, new ApiCallback() {
+                        @Override
+                        public void onOkHttpResponse(String data, int turn, int numberOfFiles) {
+                            // check if the response from file i is the last file
+                            if (turn != numberOfFiles){
+                                predictedWords.add(data);
+                                System.out.println(predictedWords);
+                            }
+                            else {
+                                predictedWords.add(data);
+                                // do text to speech
+                            }
+                        }
+
+                        @Override
+                        public void onOkHttpFailure(Exception exception) {
+                            System.out.println("Error: "+ exception);
+                        }
+                    });
                     Toast.makeText(MainActivity.this, "Sending Request...", Toast.LENGTH_SHORT).show();
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -173,7 +191,7 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
-    private void sendRequest(int time) throws IOException
+    private void sendRequest(int time, ApiCallback callback) throws IOException
     {
         int numberOfFiles = 0;
 
@@ -181,6 +199,7 @@ public class MainActivity extends AppCompatActivity
         String fullURL = this.url+"/"+"predict";
         Log.d("URL:", fullURL);
 
+        // count number of files under the current timestamp
         File dir = new File(Environment.getExternalStorageDirectory() + "/MVoice/Voice Prints Split/"+time);
         File[] files = dir.listFiles();
 
@@ -191,7 +210,10 @@ public class MainActivity extends AppCompatActivity
 
             for (int i = 1; i <= numberOfFiles; i++)
             {
+                // get path to each 1 sec file
                 String audio_path = "/storage/emulated/0/MVoice/Voice Prints Split/"+time+"/yeboo["+i+"]"+time+".wav";
+
+                // convert audio file to byte stream
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 BufferedInputStream in = new BufferedInputStream(new FileInputStream(audio_path));
                 int read;
@@ -209,24 +231,23 @@ public class MainActivity extends AppCompatActivity
                         .addFormDataPart("file", "audio.wav", RequestBody.create(MediaType.parse("audio/wav"), audioBytes))
                         .build();
 
-                // post the request
-                postRequest(fullURL, postAudio, new ApiCallback() {
+                // post the request and obtain a result once response is received
+                postRequest(fullURL, postAudio, i, numberOfFiles, new ApiCallback() {
                     @Override
-                    public void onOkHttpResponse(String data) {
-                        predictedWords.add(data);
-                        System.out.println(predictedWords);
+                    public void onOkHttpResponse(String data, int turn, int numberOfFiles) {
+                        callback.onOkHttpResponse(data, turn, numberOfFiles);
                     }
 
                     @Override
                     public void onOkHttpFailure(Exception exception) {
-                        System.out.println("Error: "+ exception);
+                        callback.onOkHttpFailure(exception);
                     }
                 });
             }
         }
     }
 
-    private void postRequest(String url, RequestBody postBody, ApiCallback callback)
+    private void postRequest(String url, RequestBody postBody, int turn, int numberOfFiles, ApiCallback callback)
     {
         // Posting the request
         Request request = new Request.Builder()
@@ -237,7 +258,7 @@ public class MainActivity extends AppCompatActivity
         client.newCall(request).enqueue(new Callback() {
             @Override
             public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                // cancel the call on fail
+                // cancel the call on fail and return exception
                 callback.onOkHttpFailure(e);
                 call.cancel();
             }
@@ -251,20 +272,22 @@ public class MainActivity extends AppCompatActivity
 
                 // get the response and store it
                 String word = Objects.requireNonNull(response.body()).string();
-                callback.onOkHttpResponse(word);
-//                runOnUiThread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        predictedWords.add(word);
-//                        System.out.println(predictedWords);
-//                    }
-//                });
+
+                /*
+                   * OkHttp requests are asynchronous and they do not work on the main thread
+                   * Meaning, it doesn't block activity on the main thread
+                   * Therefore, create an interface which will provide us the response when it is ready
+                   *
+                   * We track the file number and the number of files
+                 */
+                callback.onOkHttpResponse(word, turn, numberOfFiles);
             }
         });
     }
 
+    // OkHttp Interface
     private interface ApiCallback{
-        void onOkHttpResponse(String data);
+        void onOkHttpResponse(String data, int turn, int numberOfFiles);
         void onOkHttpFailure(Exception exception);
     }
 
