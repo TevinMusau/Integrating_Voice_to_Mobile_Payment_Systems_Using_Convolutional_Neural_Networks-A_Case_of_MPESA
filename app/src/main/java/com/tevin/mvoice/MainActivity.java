@@ -167,13 +167,60 @@ public class MainActivity extends AppCompatActivity
                     sendRequest(time, new ApiCallback() {
                         @Override
                         public void onOkHttpResponse(String data, int turn, int numberOfFiles) {
-                            // check if the response from file i is the last file
-                            if (turn != numberOfFiles){
+                            // Executes when we get response from Flask Server
+
+                            /*
+                            * The number of Files is our reference.
+                            * We check if the ArrayList, which stores the predictions,
+                            * has a length equal to the total number of files being 'predicted upon'.
+                            * To ensure that on the last file, we use the full ArrayList,
+                            * we take ArrayList length + 1, where the 1 accounts for the last file
+                            *
+                            * */
+                            if ((predictedWords.size()+1 != numberOfFiles)){
+                                // add to the ArrayList
                                 predictedWords.add(data);
+
+                                System.out.println("Added: "+predictedWords);
+                                System.out.println(predictedWords.size());
                                 System.out.println(predictedWords);
                             }
                             else {
+                                // add the prediction on the last file
                                 predictedWords.add(data);
+
+                                System.out.println("Final: " +predictedWords);
+                                System.out.println("ArrayList Size: "+predictedWords.size());
+
+                                // to store the ArrayList as an array
+                                String[] final_response_array = new String[predictedWords.size()+1];
+
+                                // Join the ArrayList elements with a comma and a space and store as string
+                                String responsePredictions = String.join(", ", predictedWords);
+                                System.out.println("TO STRING: "+responsePredictions);
+
+                                // Split at the point of comma and space and store the predictions in an array
+                                final_response_array = responsePredictions.split(", ");
+
+                                // sort the array in ascending order
+                                Arrays.sort(final_response_array);
+
+                                // we need to remove digits appended onto the predicted words
+                                for (int i = 0; i < final_response_array.length; i++){
+                                    String final_result = final_response_array[i].replaceAll("\\d", "");
+                                    final_response_array[i] = final_result;
+                                }
+
+                                // convert the resulting sorted array that is free of digits into a string
+                                String response_string = Arrays.toString(final_response_array);
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        test.setText(response_string);
+                                    }
+                                });
+                                System.out.println(response_string);
+
                                 // do text to speech
                             }
                         }
@@ -228,7 +275,7 @@ public class MainActivity extends AppCompatActivity
                 // create a request body
                 RequestBody postAudio = new MultipartBody.Builder()
                         .setType(MultipartBody.FORM)
-                        .addFormDataPart("file", "audio.wav", RequestBody.create(MediaType.parse("audio/wav"), audioBytes))
+                        .addFormDataPart("file", i+"yeboo", RequestBody.create(MediaType.parse("audio/wav"), audioBytes))
                         .build();
 
                 // post the request and obtain a result once response is received
