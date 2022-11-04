@@ -17,12 +17,12 @@ def split_audio(path, current_time):
   my_audio = path + "/final_record"+str(current_time)+".wav"
 
   if os.path.isfile(my_audio):
+    
     # Create a WAVE object
     audio = WAVE(my_audio)
     
     # contains all the metadata about the wavpack file
     audio_info = audio.info
-    
     
     length = int(audio_info.length)
     hours, mins, seconds = audio_duration(length)
@@ -33,9 +33,12 @@ def split_audio(path, current_time):
     for i in range(seconds):
       i = i + 1
       newAudio = AudioSegment.from_wav(my_audio)
-      newAudio = newAudio[t1:t2]
+      newAudio = newAudio.set_frame_rate(16000)
+      newAudio = newAudio.split_to_mono()
+      newAudio_left = newAudio[0]
+      newAudio_mono_left = newAudio_left[t1:t2]
       
-      newAudio.export("/storage/emulated/0/MVoice/Voice Prints Split/"+str(current_time)+"/"+f"yeboo{[i]}"+str(current_time)+".wav", format="wav")
+      newAudio_mono_left.export("/storage/emulated/0/MVoice/Voice Prints Split/"+str(current_time)+"/"+f"yeboo{[i]}"+str(current_time)+".wav", format="wav")
       if i is 1:
         t1 = (t1 + i)
         t1 = t1 * 1000
