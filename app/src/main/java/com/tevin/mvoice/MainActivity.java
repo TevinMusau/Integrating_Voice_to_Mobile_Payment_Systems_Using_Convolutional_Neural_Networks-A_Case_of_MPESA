@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -37,6 +38,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity
@@ -69,6 +71,8 @@ public class MainActivity extends AppCompatActivity
     private String POST = "POST";
     private String url = flaskAddress.getFlaskAddress();
     ArrayList<String> predictedWords = new ArrayList<>();
+
+    private TextToSpeech text_to_speech;
 
     // client instance
     OkHttpClient client = new OkHttpClient();
@@ -110,57 +114,15 @@ public class MainActivity extends AppCompatActivity
         // initializing stop button
         stopRecording = findViewById(R.id.stopRecording);
 
-        try {
-            // start Porcupine Wake Word Builder
-            porcupineManager = new PorcupineManager.Builder()
-                    .setAccessKey(porcupineSecret.getPorcupineAccessKey())
-                    .setKeyword(Porcupine.BuiltInKeyword.JARVIS)
-                    .build(MainActivity.this, new PorcupineManagerCallback() {
-                        @Override
-                        public void invoke(int keywordIndex) {
-                            if (keywordIndex == 0)
-                            {
-                                if (checkPermissions()) {
-                                    // begin voice input
-                                    beginRecording();
-                                }
-                                else {
-                                    // request permissions for writing ext. storage and recording audio
-                                    requestPermissions();
-                                }
-                            }
-                            else
-                            {
-                                Log.d("Porcupine", "Invalid Keyword!!");
-                                // end voice input
-                                // endRecording();
-                            }
-                        }
-                    });
-        } catch (PorcupineException e) {
-            Log.d("Error", "Something Went Wrong: " + e);
-            e.printStackTrace();
-        }
-
-        // start the Porcupine Builder
-        porcupineManager.start();
-        Log.d("Porcupine", "Porcupine Started Successfully!");
+        // Function to call Porcupine
+        listenForWakeWord();
 
         // stop recording when this button is clicked
         stopRecording.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 // stop recording
-                current_time = wavObj.stopRecording();
-                time = current_time;
-
-                // create a subdirectory with timestamp
-                String raw_voice_prints_split_with_timestamp_subdir_status = create_child_subdirectories("Voice Prints Split", String.valueOf(current_time));
-                Log.d("V.SplitStamp SubDir:", raw_voice_prints_split_with_timestamp_subdir_status);
-
-                String result =  pythonFile.callAttr("split_audio", "/storage/emulated/0/MVoice/Raw Voice Prints", current_time).toString();
-                test.setText(result);
-                Toast.makeText(MainActivity.this, "Stopping...", Toast.LENGTH_SHORT).show();
+                int time = stopRecord(pythonFile);
 
                 try {
                     // send request to flask server and get response
@@ -213,15 +175,74 @@ public class MainActivity extends AppCompatActivity
 
                                 // convert the resulting sorted array that is free of digits into a string
                                 String response_string = Arrays.toString(final_response_array);
+                                String finalResponse_string = response_string;
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        test.setText(response_string);
+                                        test.setText(finalResponse_string);
                                     }
                                 });
+                                response_string = finalResponse_string;
                                 System.out.println(response_string);
 
-                                // do text to speech
+                                // ---- DO TEXT TO SPEECH ----
+
+                                text_to_speech = new TextToSpeech(MainActivity.this, new TextToSpeech.OnInitListener() {
+                                    @Override
+                                    public void onInit(int status) {
+                                        // initialize text to speech
+                                        String init_status = ttsInit(status);
+
+                                        // check status of TTS initialisation
+                                        if ((init_status == "Failed") || (init_status == "Language not supported"))
+                                        {
+                                            runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    Toast.makeText(MainActivity.this, "TTS Initialization Failed!", Toast.LENGTH_SHORT).show();
+                                                }
+                                            });
+                                        } else {
+                                            // speak out the response
+                                            text_to_speech.speak("Did you say "+finalResponse_string+ " ?", TextToSpeech.QUEUE_FLUSH, null, null);
+                                        }
+                                    }
+                                });
+                                listenForWakeWord();
+                                stopRecording.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View view) {
+                                        // stop recording
+                                        int time = stopRecord(pythonFile);
+
+                                        try {
+                                            sendRequest(time, new ApiCallback() {
+                                                @Override
+                                                public void onOkHttpResponse(String data, int turn, int numberOfFiles) {
+                                                    if ((data == "yes")){
+                                                        // do speaker recognition
+
+                                                        // make response_string the amount
+
+                                                        // Daraja API
+
+                                                    } else if (data == "no"){
+                                                        // speak out "I couldn't here that"
+                                                    } else {
+                                                        // speak out "I couldn't here that"
+                                                    }
+                                                }
+
+                                                @Override
+                                                public void onOkHttpFailure(Exception exception) {
+
+                                                }
+                                            });
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                });
                             }
                         }
 
@@ -236,6 +257,99 @@ public class MainActivity extends AppCompatActivity
                 }
             }
         });
+    }
+
+    private int stopRecord(PyObject pythonFile) {
+        // stop recording
+        current_time = wavObj.stopRecording();
+        time = current_time;
+
+        // create a subdirectory with timestamp
+        String raw_voice_prints_split_with_timestamp_subdir_status = create_child_subdirectories("Voice Prints Split", String.valueOf(current_time));
+        Log.d("V.SplitStamp SubDir:", raw_voice_prints_split_with_timestamp_subdir_status);
+
+        String result =  pythonFile.callAttr("split_audio", "/storage/emulated/0/MVoice/Raw Voice Prints", current_time).toString();
+        test.setText(result);
+        Toast.makeText(MainActivity.this, "Stopping...", Toast.LENGTH_SHORT).show();
+
+        return time;
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (text_to_speech != null){
+            // release resources held by TTS
+            text_to_speech.stop();
+
+            // stop TTS
+            text_to_speech.shutdown();
+        }
+        super.onDestroy();
+    }
+
+    private String ttsInit(int status)
+    {
+        String init_status = "";
+
+        // check status of initialization
+        if (status == TextToSpeech.SUCCESS){
+
+            //set language to English
+            int result = text_to_speech.setLanguage(Locale.ENGLISH);
+
+            // check if the language is supported
+            if (result == TextToSpeech.LANG_MISSING_DATA
+                    || result == TextToSpeech.LANG_NOT_SUPPORTED){
+                init_status = "Language not supported";
+                Log.e("text_to_speech", "Language not supported");
+            } else {
+                init_status = "Success";
+                Log.d("text_to_speech: ","Good to Go!");
+            }
+            return init_status;
+        } else {
+            init_status = "Failed";
+            return init_status;
+        }
+    }
+
+    private void listenForWakeWord()
+    {
+        try {
+            // start Porcupine Wake Word Builder
+            porcupineManager = new PorcupineManager.Builder()
+                    .setAccessKey(porcupineSecret.getPorcupineAccessKey())
+                    .setKeyword(Porcupine.BuiltInKeyword.JARVIS)
+                    .build(MainActivity.this, new PorcupineManagerCallback() {
+                        @Override
+                        public void invoke(int keywordIndex) {
+                            if (keywordIndex == 0)
+                            {
+                                if (checkPermissions()) {
+                                    // begin voice input
+                                    beginRecording();
+                                }
+                                else {
+                                    // request permissions for writing ext. storage and recording audio
+                                    requestPermissions();
+                                }
+                            }
+                            else
+                            {
+                                Log.d("Porcupine", "Invalid Keyword!!");
+                                // end voice input
+                                // endRecording();
+                            }
+                        }
+                    });
+        } catch (PorcupineException e) {
+            Log.d("Error", "Something Went Wrong: " + e);
+            e.printStackTrace();
+        }
+
+        // start the Porcupine Builder
+        porcupineManager.start();
+        Log.d("Porcupine", "Porcupine Started Successfully!");
     }
 
     private void sendRequest(int time, ApiCallback callback) throws IOException
