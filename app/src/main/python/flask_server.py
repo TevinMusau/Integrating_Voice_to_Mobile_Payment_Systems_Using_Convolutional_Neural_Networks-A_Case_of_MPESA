@@ -1,7 +1,6 @@
 from flask import Flask, request
 from keyword_spotting_service import Keyword_Spotting_Service
 from pyannote.audio import Pipeline
-
 import speech_recognition as sr
 # from waitress import serve
 import os
@@ -12,7 +11,6 @@ app = Flask(__name__)
 predictions = []
 audios = {}
 temps = {}
-
 
 # -------------------------------- KEY WORD SPOTTING MODEL (START) --------------------------------
 
@@ -70,7 +68,7 @@ def predict():
                 1 : predicted_keyword
             }
             
-            # remove the audio file
+            # remove the audio file ass
             os.remove(file_name)
             
     # sort the dictionary of predicted keywords
@@ -127,7 +125,6 @@ def name_recognize():
     rec_speech = sr.AudioFile(file_name)
     with rec_speech as source:
         audio = r.record(source)
-    
     
     speech_recognised_name = r.recognize_google(audio)
     print(speech_recognised_name)
