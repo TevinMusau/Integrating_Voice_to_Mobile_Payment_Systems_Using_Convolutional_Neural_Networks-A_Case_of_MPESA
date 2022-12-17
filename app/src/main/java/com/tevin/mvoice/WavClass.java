@@ -168,6 +168,7 @@ public class WavClass
                 recorder.release();
                 recordingThread = null;
                 this.current_time = createWavFile(getPath(tempRawFile),getPath(tempWavFile));
+                System.out.println("CREATED FILE!!");
             }
         }
         catch (Exception e){

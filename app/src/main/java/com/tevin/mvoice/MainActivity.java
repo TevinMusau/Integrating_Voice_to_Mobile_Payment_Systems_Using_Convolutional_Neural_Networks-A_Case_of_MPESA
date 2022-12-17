@@ -1,5 +1,6 @@
 package com.tevin.mvoice;
 
+import static android.Manifest.permission.READ_PHONE_STATE;
 import static com.tevin.mvoice.Constants.BUSINESS_SHORT_CODE;
 import static com.tevin.mvoice.Constants.CALLBACKURL;
 import static com.tevin.mvoice.Constants.PARTYB;
@@ -13,11 +14,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.speech.tts.TextToSpeech;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -46,10 +49,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
+import static android.Manifest.permission.READ_PHONE_NUMBERS;
+import static android.Manifest.permission.READ_PHONE_STATE;
+import static android.Manifest.permission.READ_SMS;
 
 public class MainActivity extends AppCompatActivity
 {
@@ -72,7 +79,6 @@ public class MainActivity extends AppCompatActivity
 
     // for setting time that the recording was captured
     int current_time;
-    int time;
 
     /* create instances of the class to record audio in .wav format
     * These instances represent different categories of voice prints
@@ -146,7 +152,7 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View view) {
                 // stop recording
                 int time1 = stopRecord(pythonFile);
-                Log.d("Tiiimmme1", String.valueOf(time1));
+                Log.d("Time1", String.valueOf(time1));
 
                 try {
                     // send request to flask server and get response
@@ -170,8 +176,7 @@ public class MainActivity extends AppCompatActivity
                                 System.out.println("Added: "+predictedWords);
                                 System.out.println(predictedWords.size());
                                 System.out.println(predictedWords);
-                            }
-                            else {
+                            } else {
                                 // add the prediction on the last file
                                 predictedWords.add(data);
 
@@ -211,7 +216,7 @@ public class MainActivity extends AppCompatActivity
 
                                 // ---- DO TEXT TO SPEECH ----
                                 // call TTS method
-                                ttsInit(finalResponse_string);
+//                                ttsInit(finalResponse_string);
 
                                 // clear the Array List
                                 predictedWords.clear();
@@ -223,17 +228,11 @@ public class MainActivity extends AppCompatActivity
                                 String amount = wordsToNumbers(final_response_array);
                                 Log.d("Amount", amount);
 
-                                ttsInit("Your Amount is "+amount);
-                                ttsInit("Please Enter Your MPESA PIN to complete the transaction");
+//                                ttsInit("Your Amount is "+amount);
+                                ttsInit("The amount entered is "+ amount);
 
                                 // perform the STKPush
                                 performSTKPush(amount);
-
-                                // Allow user to confirm the response
-                                // start Porcupine
-//                                listenForWakeWord();
-
-
                             }
                         }
 
@@ -262,8 +261,8 @@ public class MainActivity extends AppCompatActivity
         super.onDestroy();
     }
 
-    private void getAccessToken()
-    {
+    private void getAccessToken() {
+
         // if we got the access token set to true
         mApiClient.setGetAccessToken(true);
         mApiClient.mpesaService().getAccessToken().enqueue(new retrofit2.Callback<AccessToken>() {
@@ -282,6 +281,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     public void performSTKPush(String amount){
+
         // from Response Body
         String timestamp = Utils.getTimestamp();
         STKPush stkPush = new STKPush(
@@ -334,8 +334,8 @@ public class MainActivity extends AppCompatActivity
         void onOkHttpFailureSV(Exception exception);
     }
 
-    private void ttsInit(String text)
-    {
+    private void ttsInit(String text) {
+
         text_to_speech = new TextToSpeech(MainActivity.this, new TextToSpeech.OnInitListener() {
             @Override
             public void onInit(int status) {
@@ -354,8 +354,7 @@ public class MainActivity extends AppCompatActivity
                         // speak out the response
                         text_to_speech.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
                     }
-                }
-                else{
+                } else {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
@@ -367,8 +366,7 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
-    private String wordsToNumbers(String [] array)
-    {
+    private String wordsToNumbers(String [] array) {
         // the final string that holds the numbers
         StringBuilder result = new StringBuilder();
         Log.d("Array Len", String.valueOf(array.length));
@@ -410,8 +408,8 @@ public class MainActivity extends AppCompatActivity
         return result.toString();
     }
 
-    private void sendRequest(int time, ApiCallback callback) throws IOException
-    {
+    private void sendRequest(int time, ApiCallback callback) throws IOException {
+
         int numberOfFiles = 0;
 
         // full url to the endpoint
@@ -422,13 +420,11 @@ public class MainActivity extends AppCompatActivity
         File dir = new File(Environment.getExternalStorageDirectory() + "/MVoice/Voice Prints Split/"+time);
         File[] files = dir.listFiles();
 
-        if (files != null)
-        {
+        if (files != null) {
             numberOfFiles = files.length;
             Log.d("NoOfFiles:", String.valueOf(numberOfFiles));
 
-            for (int i = 1; i <= numberOfFiles; i++)
-            {
+            for (int i = 1; i <= numberOfFiles; i++) {
                 // get path to each 1 sec file
                 String audio_path = "/storage/emulated/0/MVoice/Voice Prints Split/"+time+"/yeboo["+i+"]"+time+".wav";
 
@@ -466,8 +462,8 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private void postRequest(String url, RequestBody postBody, int turn, int numberOfFiles, ApiCallback callback)
-    {
+    private void postRequest(String url, RequestBody postBody, int turn, int numberOfFiles, ApiCallback callback) {
+
         // Posting the request
         Request request = new Request.Builder()
                 .url(url)
@@ -504,93 +500,6 @@ public class MainActivity extends AppCompatActivity
         });
     }
 
-    private void sendRequestToSpeakerVerify(int time, SVApiCallback callback) throws IOException
-    {
-        // full url to the endpoint
-        String fullURL = this.url+"/"+"verify_speaker";
-        Log.d("URL:", fullURL);
-
-        // check if file exists
-        File file = new File(Environment.getExternalStorageDirectory() + "/MVoice/Voice Prints Split/concatenation"+time+".wav");
-
-        if (file.exists()){
-            String audio_path = "/storage/emulated/0/MVoice/Voice Prints Split/concatenation"+time+".wav";
-
-            // convert audio file to byte stream
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            BufferedInputStream in = new BufferedInputStream(new FileInputStream(audio_path));
-            int read;
-            byte[] buff = new byte[1024];
-            while ((read = in.read(buff)) > 0)
-            {
-                out.write(buff, 0, read);
-            }
-            out.flush();
-            byte[] audioBytes = out.toByteArray();
-
-            // create a request body
-            RequestBody postAudio = new MultipartBody.Builder()
-                    .setType(MultipartBody.FORM)
-                    .addFormDataPart("file", "concatenation.wav", RequestBody.create(MediaType.parse("audio/wav"), audioBytes))
-                    .build();
-
-            // post the request and obtain a result once response is received
-            postRequestToSpeakerVerify(fullURL, postAudio, new SVApiCallback() {
-                @Override
-                public void onOkHttpResponseSV(String data) {
-                    callback.onOkHttpResponseSV(data);
-                }
-
-                @Override
-                public void onOkHttpFailureSV(Exception exception) {
-                    callback.onOkHttpFailureSV(exception);
-                }
-            });
-        }
-        else{
-            Log.d("Concat_File","Not Found");
-            ttsInit("Something's not Right");
-        }
-    }
-
-    private void postRequestToSpeakerVerify(String url, RequestBody postBody, SVApiCallback callback)
-    {
-        // Posting the request
-        Request request = new Request.Builder()
-                .url(url)
-                .post(postBody)
-                .build();
-
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                // cancel the call on fail and return exception
-                callback.onOkHttpFailureSV(e);
-                call.cancel();
-            }
-
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException
-            {
-                // get the predicted number from the model
-                // for some reason it doesn't allow me to call for the response more than once and update a view
-                Log.d("Success", "SV Response Received!");
-
-                // get the response and store it
-                String word = Objects.requireNonNull(response.body()).string();
-
-                /*
-                 * OkHttp requests are asynchronous and they do not work on the main thread
-                 * Meaning, it doesn't block activity on the main thread
-                 * Therefore, create an interface which will provide us the response when it is ready
-                 *
-                 * We track the file number and the number of files
-                 */
-                callback.onOkHttpResponseSV(word);
-            }
-        });
-    }
-
     private int stopRecord(PyObject pythonFile) {
         // stop recording
         current_time = wavObj.stopRecording();
@@ -606,8 +515,7 @@ public class MainActivity extends AppCompatActivity
         return current_time;
     }
 
-    private void listenForWakeWord()
-    {
+    private void listenForWakeWord() {
         try {
             // start Porcupine Wake Word Builder
             porcupineManager = new PorcupineManager.Builder()
@@ -616,19 +524,15 @@ public class MainActivity extends AppCompatActivity
                     .build(MainActivity.this, new PorcupineManagerCallback() {
                         @Override
                         public void invoke(int keywordIndex) {
-                            if (keywordIndex == 0)
-                            {
+                            if (keywordIndex == 0) {
                                 if (checkPermissions()) {
                                     // begin voice input
-                                    beginRecording();
-                                }
-                                else {
+                                    beginRecording(wavObj);
+                                } else {
                                     // request permissions for writing ext. storage and recording audio
                                     requestPermissions();
                                 }
-                            }
-                            else
-                            {
+                            } else {
                                 Log.d("Porcupine", "Invalid Keyword!!");
                                 // end voice input
                                 // endRecording();
@@ -645,34 +549,29 @@ public class MainActivity extends AppCompatActivity
         Log.d("Porcupine", "Porcupine Started Successfully!");
     }
 
-    private String create_child_subdirectories(String parent_directory, String child_directory)
-    {
+    private String create_child_subdirectories(String parent_directory, String child_directory) {
         // specifying dir name
         File dir = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/MVoice/" + parent_directory + "/" + child_directory);
-        if (!dir.isDirectory()){
+        if (!dir.isDirectory()) {
             // create the dir if it doesn't already exist
             if (dir.mkdir()) {
                 return "Directory Created";
-            }
-            else{
+            } else {
                 return "Unable to create Child Directory";
             }
-        }
-        else{
+        } else {
             return "Child Directory already exists";
         }
     }
 
-    private String create_subdirectories(String directory_name)
-    {
+    private String create_subdirectories(String directory_name) {
         // specifying dir name
         File dir = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/MVoice/" + directory_name);
-        if (!dir.isDirectory()){
+        if (!dir.isDirectory()) {
             // create the dir if it doesn't already exist
             if (dir.mkdir()) {
                 return "Directory Created";
-            }
-            else{
+            } else{
                 return "Unable to create MVoice Directory";
             }
         }
@@ -681,26 +580,22 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    private String create_MVoice_Main_Directory()
-    {
+    private String create_MVoice_Main_Directory() {
         // specifying dir name
         File dir = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/MVoice");
-        if (!dir.isDirectory()){
+        if (!dir.isDirectory()) {
             // create the dir if it doesn't already exist
             if (dir.mkdir()) {
                 return "Directory Created";
-            }
-            else{
+            } else {
                 return "Unable to create MVoice Directory";
             }
-        }
-        else{
+        } else {
             return "MVoice Directory already exists";
         }
     }
 
-    private void beginRecording()
-    {
+    private void beginRecording(WavClass wavObj) {
         // Two processes, Porcupine and AudioRecorder, can't use the same microphone at the same time
         // Therefore, we must stop one of them
         try {
@@ -721,7 +616,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     // check if permissions are granted for the app
-    private boolean checkPermissions(){
+    private boolean checkPermissions() {
         int first = ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
         int second = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
 
@@ -729,8 +624,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     // request permissions to record audio and write to ext. storage
-    private void requestPermissions()
-    {
+    private void requestPermissions() {
         ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
     }
 }
