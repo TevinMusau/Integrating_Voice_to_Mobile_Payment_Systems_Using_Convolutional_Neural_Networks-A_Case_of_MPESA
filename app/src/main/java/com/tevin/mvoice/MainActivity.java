@@ -83,7 +83,7 @@ public class MainActivity extends AppCompatActivity
     /* create instances of the class to record audio in .wav format
     * These instances represent different categories of voice prints
     * e.g., raw, full duration voice prints will have the instance which directs to the path where they will be stored
-    * */
+    */
     WavClass wavObj = new WavClass(Environment.getExternalStorageDirectory().getAbsolutePath() + "/MVoice/Raw Voice Prints");
 
     private String POST = "POST";
