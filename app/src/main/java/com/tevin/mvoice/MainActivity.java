@@ -1,6 +1,5 @@
 package com.tevin.mvoice;
 
-import static android.Manifest.permission.READ_PHONE_STATE;
 import static com.tevin.mvoice.Constants.BUSINESS_SHORT_CODE;
 import static com.tevin.mvoice.Constants.CALLBACKURL;
 import static com.tevin.mvoice.Constants.PARTYB;
@@ -14,13 +13,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.speech.tts.TextToSpeech;
-import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -49,14 +46,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
-import static android.Manifest.permission.READ_PHONE_NUMBERS;
-import static android.Manifest.permission.READ_PHONE_STATE;
-import static android.Manifest.permission.READ_SMS;
+
 
 public class MainActivity extends AppCompatActivity
 {
@@ -132,7 +126,6 @@ public class MainActivity extends AppCompatActivity
 
         // specify python files
         PyObject pythonFile = python.getModule("split_audio");
-        PyObject pythonFile_Concat = python.getModule("concatenate_audio");
 
         // instance of secrets class that houses client secrets
         porcupineSecret = new Secrets();
@@ -228,8 +221,7 @@ public class MainActivity extends AppCompatActivity
                                 String amount = wordsToNumbers(final_response_array);
                                 Log.d("Amount", amount);
 
-//                                ttsInit("Your Amount is "+amount);
-                                ttsInit("The amount entered is "+ amount);
+                                ttsInit("The amount entered is "+ amount + ". Please Enter Your MPESA PIN to complete transaction");
 
                                 // perform the STKPush
                                 performSTKPush(amount);
