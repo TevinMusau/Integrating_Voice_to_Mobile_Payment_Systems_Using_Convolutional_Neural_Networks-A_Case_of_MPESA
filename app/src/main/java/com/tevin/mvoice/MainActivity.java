@@ -80,7 +80,6 @@ public class MainActivity extends AppCompatActivity
     */
     WavClass wavObj = new WavClass(Environment.getExternalStorageDirectory().getAbsolutePath() + "/MVoice/Raw Voice Prints");
 
-    private String POST = "POST";
     private String url = flaskAddress.getFlaskAddress();
     ArrayList<String> predictedWords = new ArrayList<>();
 

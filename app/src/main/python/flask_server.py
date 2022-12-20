@@ -68,7 +68,7 @@ def predict():
                 1 : predicted_keyword
             }
             
-            # remove the audio file ass
+            # remove the audio file 
             os.remove(file_name)
             
     # sort the dictionary of predicted keywords
