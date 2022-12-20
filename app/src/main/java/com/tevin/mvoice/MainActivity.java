@@ -272,7 +272,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     public void performSTKPush(String amount){
-
         // from Response Body
         String timestamp = Utils.getTimestamp();
         STKPush stkPush = new STKPush(
@@ -318,11 +317,6 @@ public class MainActivity extends AppCompatActivity
     private interface ApiCallback{
         void onOkHttpResponse(String data, int turn, int numberOfFiles);
         void onOkHttpFailure(Exception exception);
-    }
-
-    private interface SVApiCallback{
-        void onOkHttpResponseSV(String data);
-        void onOkHttpFailureSV(Exception exception);
     }
 
     private void ttsInit(String text) {
@@ -400,7 +394,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void sendRequest(int time, ApiCallback callback) throws IOException {
-
         int numberOfFiles = 0;
 
         // full url to the endpoint
@@ -454,7 +447,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void postRequest(String url, RequestBody postBody, int turn, int numberOfFiles, ApiCallback callback) {
-
         // Posting the request
         Request request = new Request.Builder()
                 .url(url)
